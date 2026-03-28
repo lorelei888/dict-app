@@ -43,10 +43,11 @@ def search():
 
     # 過濾符合的字詞
     results = [
-        w for w in words
-        if query in w["word"].lower() or query in w["short"].lower()
+    w for w in words
+    if query in w["word"].lower()
+    or query in w["short"].lower()
+    or query in w.get("zh", "")
     ]
-
     # 若無結果，標記超出題庫
     return json_response({
         "results": results,
