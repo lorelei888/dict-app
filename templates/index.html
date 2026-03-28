@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
@@ -215,9 +215,14 @@ async function openPanel(entry) {
   document.getElementById("panel-short").textContent = entry.short;
   document.getElementById("ai-text").textContent     = "Generating…";
 
-  const res  = await fetch(`/explain?word=${encodeURIComponent(entry.word)}&lang=${currentLang}`);
-  const data = await res.json();
-  document.getElementById("ai-text").textContent = data.explanation || data.error || "Error";
+  try {
+    const res  = await fetch(`/explain?word=${encodeURIComponent(entry.word)}&lang=${currentLang}`);
+    const text = await res.text();
+    const data = JSON.parse(text);
+    document.getElementById("ai-text").textContent = data.explanation || data.error || "Error";
+  } catch(e) {
+    document.getElementById("ai-text").textContent = "⚠ 無法取得 AI 解釋：" + e.message;
+  }
 }
 
 function closePanel() {
