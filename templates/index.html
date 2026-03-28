@@ -1,0 +1,231 @@
+﻿<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>Lexicon Dictionary</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #0d0d0d;
+            color: #e8e0d0;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #e8c547;
+        }
+
+        .tabs button {
+            padding: 8px 20px;
+            margin-right: 8px;
+            border-radius: 20px;
+            border: 1px solid #444;
+            background: transparent;
+            color: #aaa;
+            cursor: pointer;
+        }
+
+            .tabs button.active {
+                border-color: #e8c547;
+                color: #e8c547;
+            }
+
+        #search {
+            margin: 16px 0;
+            padding: 10px 16px;
+            width: 300px;
+            background: #161616;
+            border: 1px solid #333;
+            color: #e8e0d0;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+
+        .warning {
+            color: #f0a060;
+            margin: 8px 0;
+        }
+
+        .grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .card {
+            background: #111;
+            border: 1px solid #222;
+            border-radius: 10px;
+            padding: 16px;
+            width: 220px;
+            cursor: pointer;
+        }
+
+            .card:hover {
+                border-color: #e8c547;
+            }
+
+        .word {
+            color: #e8c547;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .pos {
+            color: #555;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .short {
+            color: #888;
+            font-size: 12px;
+            margin-top: 6px;
+        }
+
+        #panel {
+            position: fixed;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 340px;
+            background: #0a0a0a;
+            border-left: 1px solid #e8c547;
+            padding: 32px 24px;
+            overflow-y: auto;
+            display: none;
+        }
+
+            #panel h2 {
+                color: #e8c547;
+                font-size: 28px;
+            }
+
+        #ai-box {
+            background: #111;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+        }
+
+        #ai-label {
+            color: #e8c547;
+            font-size: 11px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        #ai-text {
+            color: #ccc;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        #close-btn {
+            margin-top: 20px;
+            padding: 8px 20px;
+            background: transparent;
+            border: 1px solid #e8c547;
+            color: #e8c547;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>辭 Lexicon</h1>
+
+    <!-- 語言切換 -->
+    <div class="tabs">
+        {% for key, d in dictionaries.items() %}
+        <button onclick="switchLang('{{ key }}')" id="tab-{{ key }}">
+            {{ d.flag }} {{ d.label }}
+        </button>
+        {% endfor %}
+    </div>
+
+    <!-- 搜尋框 -->
+    <input id="search" placeholder="Search words…" oninput="doSearch()" />
+    <div class="warning" id="warning" style="display:none"></div>
+
+    <!-- 字卡區 -->
+    <div class="grid" id="grid"></div>
+
+    <!-- 詳細面板 -->
+    <div id="panel">
+        <p id="panel-pos" style="color:#555;font-size:11px;text-transform:uppercase"></p>
+        <h2 id="panel-word"></h2>
+        <p id="panel-short" style="color:#aaa;font-size:14px;margin-top:8px"></p>
+        <div id="ai-box">
+            <div id="ai-label">✦ AI Explanation</div>
+            <div id="ai-text">Loading…</div>
+        </div>
+        <button id="close-btn" onclick="closePanel()">Close</button>
+    </div>
+
+    <script>
+let currentLang = "en";
+
+function switchLang(lang) {
+  currentLang = lang;
+  document.getElementById("search").value = "";
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
+  document.getElementById("tab-" + lang).classList.add("active");
+  doSearch();
+}
+
+async function doSearch() {
+  const q = document.getElementById("search").value;
+  const res = await fetch(`/search?lang=${currentLang}&q=${encodeURIComponent(q)}`);
+  const data = await res.json();
+
+  const warning = document.getElementById("warning");
+  if (data.out_of_range) {
+    warning.style.display = "block";
+    warning.textContent = `⚠ "${q}" is not in the dictionary.`;
+  } else {
+    warning.style.display = "none";
+  }
+
+  renderCards(data.results);
+}
+
+function renderCards(words) {
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+  words.forEach(w => {
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `
+      <div class="word">${w.word}</div>
+      <div class="pos">${w.pos} · ${w.phonetic}</div>
+      <div class="short">${w.short}</div>`;
+    card.onclick = () => openPanel(w);
+    grid.appendChild(card);
+  });
+}
+
+async function openPanel(entry) {
+  document.getElementById("panel").style.display = "block";
+  document.getElementById("panel-word").textContent  = entry.word;
+  document.getElementById("panel-pos").textContent   = entry.pos + " · " + entry.phonetic;
+  document.getElementById("panel-short").textContent = entry.short;
+  document.getElementById("ai-text").textContent     = "Generating…";
+
+  const res  = await fetch(`/explain?word=${encodeURIComponent(entry.word)}&lang=${currentLang}`);
+  const data = await res.json();
+  document.getElementById("ai-text").textContent = data.explanation || data.error || "Error";
+}
+
+function closePanel() {
+  document.getElementById("panel").style.display = "none";
+}
+
+// 預設載入英語
+switchLang("en");
+    </script>
+</body>
+</html>
