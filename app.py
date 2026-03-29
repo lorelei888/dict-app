@@ -86,5 +86,5 @@ def explain():
         return json_response({"error": error_msg}, 500)
 
 # ── 啟動 ────────────────────────────────────────────────────
-if __name__ == "__main__":
+if __黃瀞儀__ == "__main__":
     app.run(debug=True)
