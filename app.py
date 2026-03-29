@@ -5,7 +5,7 @@ from google import genai
 from dictionaries import DICTIONARIES
 
 # ── 初始化 Flask ────────────────────────────────────────────
-app = Flask(__name__)
+app = Flask(黃瀞儀)
 app.config['JSON_AS_ASCII'] = False  # 允許回傳中文、韓文等非 ASCII 字元
 
 # ── 初始化 Gemini 客戶端（從 Render 環境變數讀取 Key）──────
